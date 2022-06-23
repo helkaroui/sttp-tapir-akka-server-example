@@ -1,6 +1,8 @@
 # Sttp Tapir + Akka Backend Example
+A project example to showcase how Tapir works with Akka Http backend
 
-## Add dependencies
+## Create an Endpoint
+To expose an endpoint as an akka-http server, first add the following dependency:
 ```sbt
 libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1",
@@ -8,9 +10,31 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "1.0.1"
 )
 ```
+This will transitively pull some Akka modules in version 2.6.
 
-## Create an Endpoint
+The toRoute method requires a single, or a list of ServerEndpoints, which can be created by adding server logic to an endpoint.
 
+```scala
+import sttp.tapir._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import scala.concurrent.Future
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Route
+import scala.concurrent.ExecutionContext.Implicits.global
+
+def countCharacters(s: String): Future[Either[Unit, Int]] = 
+  Future.successful(Right[Unit, Int](s.length))
+
+val countCharactersEndpoint: PublicEndpoint[String, Unit, Int, Any] = 
+  endpoint.in(stringBody).out(plainBody[Int])
+  
+val countCharactersRoute: Route = 
+  AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint.serverLogic(countCharacters))
+
+Http()
+  .newServerAt("localhost", 8000)
+  .bind(countCharactersRoute)
+```
 
 ## Enable Swagger UI
 To generate OpenAPI documentation and expose it using the Swagger UI in a single step, first add the dependency:
